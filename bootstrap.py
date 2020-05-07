@@ -12,7 +12,7 @@ run('.env/bin/pip install --upgrade setuptools')
 run('.env/bin/pip install --upgrade pip')
 run('.env/bin/pip install wheel')
 
-run('cd vendor2/buildout; ../../.env/bin/python setup.py develop')
+run('cd vendor/buildout; ../../.env/bin/python setup.py develop')
 
 run('.env/bin/buildout bootstrap')
 
