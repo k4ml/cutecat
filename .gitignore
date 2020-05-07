@@ -140,3 +140,4 @@ dmypy.json
 bin/
 .mr.developer.cfg
 externals-src/
+buildout.cfg
