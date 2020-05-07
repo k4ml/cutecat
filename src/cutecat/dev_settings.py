@@ -1,0 +1,1 @@
+from cutecat.settings import *
