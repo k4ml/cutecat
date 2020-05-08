@@ -100,7 +100,6 @@ except ImportError:
     install_pip()
 
 ######################################################################
-# Install buildout
 print('')
 print('Install buildout')
 print('')
@@ -118,6 +117,24 @@ import zc.buildout.easy_install
 zc.buildout.easy_install.scripts(
     ['zc.buildout'], pkg_resources.working_set , sys.executable, 'bin')
 
+######################################################################
+def install_coverage():
+    print('')
+    print('Install coverage')
+    print('')
+    bin_pip = os.path.join('bin', 'pip')
+    if subprocess.call(
+        [sys.executable] +
+        ['-m', 'pip', 'install', 'coverage'],
+        ):
+        raise RuntimeError("coverage install failed.")
+
+try:
+    import coverage
+except ImportError:
+    install_coverage()
+
+######################################################################
 print('')
 print('Run buildout')
 print('')
