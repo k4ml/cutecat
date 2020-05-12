@@ -155,10 +155,9 @@ Let's define a script that uses out ext demo:
     >>> mkdir('demo')
     >>> write('demo', 'demo.py',
     ... """
-    ... import sys
+    ... import extdemo, sys
     ... def print_(*args):
     ...     sys.stdout.write(' '.join(map(str, args)) + '\\n')
-    ... import extdemo, sys
     ... def main():
     ...     print_(extdemo.val)
     ... """)
@@ -341,7 +340,7 @@ Create our buildout:
     ...
     ... """ % dict(server=link_server))
     >>> print_(system(buildout+' -vvv'), end='') # doctest: +ELLIPSIS
-    Checking for upgrades.
+    Installing 'zc.buildout', 'setuptools', 'pip', 'wheel'.
     ...
     Develop: '/sample-buildout/recipes'
     ...
@@ -400,7 +399,7 @@ are interpolated with os.environ before the're set:
     ...
     ... """ % dict(server=link_server))
     >>> print_(system(buildout+' -vvv'), end='') # doctest: +ELLIPSIS
-    Checking for upgrades.
+    Installing 'zc.buildout', 'setuptools', 'pip', 'wheel'.
     ...
     Develop: '/sample-buildout/recipes'
     ...

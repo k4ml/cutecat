@@ -75,8 +75,9 @@ Now, if we look at the buildout eggs directory:
     >>> ls(sample_buildout, 'eggs')
     d  demo-0.2-py2.3.egg
     d  demoneeded-1.1-py2.3.egg
-    d  pip-20.0-py2.3.egg
-    -  setuptools-0.7-py2.3.egg
+    -  pip.egg-link
+    -  setuptools.egg-link
+    -  wheel.egg-link
     d  zc.buildout-1.0-py2.3.egg
 
 We see that we got an egg for demo that met the requirement, as well
@@ -265,8 +266,9 @@ We didn't get an update for demo:
     >>> ls(sample_buildout, 'eggs')
     d  demo-0.2-py2.3.egg
     d  demoneeded-1.1-py2.3.egg
-    d  pip-20.0-py2.3.egg
-    -  setuptools-0.7-py2.3.egg
+    -  pip.egg-link
+    -  setuptools.egg-link
+    -  wheel.egg-link
     d  zc.buildout-1.0-py2.3.egg
 
 If we run the buildout on the default online and newest modes,
@@ -284,8 +286,9 @@ Then we'll get a new demo egg:
     d  demo-0.2-py2.3.egg
     d  demo-0.3-py2.3.egg
     d  demoneeded-1.1-py2.3.egg
-    d  pip-20.0-py2.3.egg
-    -  setuptools-0.7-py2.4.egg
+    -  pip.egg-link
+    -  setuptools.egg-link
+    -  wheel.egg-link
     d  zc.buildout-1.0-py2.4.egg
 
 The script is updated too:

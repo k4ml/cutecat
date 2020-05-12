@@ -47,7 +47,8 @@ setup(
     namespace_packages = ['zc'],
     install_requires = [
         'setuptools>=8.0',
-        'pip>=20.0.1',
+        'pip',
+        'wheel',
     ],
     include_package_data = True,
     entry_points = entry_points,

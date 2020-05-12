@@ -25,7 +25,7 @@ except ImportError:
 
 import errno
 import logging
-from multiprocessing import Process
+import multiprocessing
 import os
 import pkg_resources
 import random
@@ -220,32 +220,6 @@ class Buildout(zc.buildout.buildout.Buildout):
 
     Options = TestOptions
 
-
-def keep_or_rmtree(base, tmp):
-    if os.environ.get('BUILDOUTKEEP', '') != 'keep':
-        rmtree(base)
-        rmtree(tmp)
-    else:
-        output(base, tmp)
-
-
-def output(base, tmp):
-    print('')
-    print('*' * 80)
-    print('')
-    print('DIRECTORY')
-    print('cd %s' % base)
-    print('FIND_LINKS')
-    print('cd %s' % tmp)
-    print('')
-    print('remove when done with:')
-    print('')
-    print('rm -rf %s' % base)
-    print('rm -rf %s' % tmp)
-    print('')
-    print('*' * 80)
-    print('')
-
 def buildoutSetUp(test):
 
     test.globs['__tear_downs'] = __tear_downs = []
@@ -273,12 +247,7 @@ def buildoutSetUp(test):
 
     base = tempfile.mkdtemp('buildoutSetUp')
     base = os.path.realpath(base)
-
-    tmp = tempfile.mkdtemp('buildouttests')
-    if os.environ.get('BUILDOUTKEEP', '') == 'keep':
-        output(base, tmp)
-
-    register_teardown(lambda: keep_or_rmtree(base, tmp))
+    register_teardown(lambda base=base: rmtree(base))
 
     old_home = os.environ.get('HOME')
     os.environ['HOME'] = os.path.join(base, 'bbbBadHome')
@@ -291,6 +260,9 @@ def buildoutSetUp(test):
 
     base = os.path.join(base, '_TEST_')
     os.mkdir(base)
+
+    tmp = tempfile.mkdtemp('buildouttests')
+    register_teardown(lambda: rmtree(tmp))
 
     zc.buildout.easy_install.default_index_url = 'file://'+tmp
     os.environ['buildout-testing-index-url'] = (
@@ -325,15 +297,8 @@ def buildoutSetUp(test):
     # way due to the trick above:
     os.mkdir('develop-eggs')
 
-    if os.getenv("COVERAGE_PROCESS_START"):
-        # The user has requested subprocess code coverage. Since we will be changing
-        # directories, we need to make sure this path is absolute, which means
-        # we need to temporarily return to our starting directory.
-        os.chdir(here)
-        path_to_coveragerc = os.path.abspath(os.environ['COVERAGE_PROCESS_START'])
-        os.chdir(sample)
-        assert os.path.isfile(path_to_coveragerc), path_to_coveragerc
-        os.environ['COVERAGE_PROCESS_START'] = path_to_coveragerc
+    path_to_coveragerc = os.getenv("COVERAGE_PROCESS_START", None)
+    if path_to_coveragerc is not None:
 
         # Before we return to the current directory and destroy the
         # temporary working directory, we need to copy all the coverage files
@@ -664,7 +629,11 @@ def run_from_process(target, *args, **kw):
     target(*args, **kw)
 
 def run_in_process(*args, **kwargs):
-    process = Process(target=run_from_process, args=args, kwargs=kwargs)
+    try:
+        ctx = multiprocessing.get_context('fork')
+        process = ctx.Process(target=run_from_process, args=args, kwargs=kwargs)
+    except AttributeError:
+        process = multiprocessing.Process(target=run_from_process, args=args, kwargs=kwargs)
     process.daemon = True
     process.start()
     process.join(99)
@@ -685,17 +654,39 @@ def run_buildout_in_process(command='buildout'):
     run_in_process(run_buildout, command)
 
 
-def setup_coverage():
+def setup_coverage(path_to_coveragerc):
     if 'RUN_COVERAGE' not in os.environ:
         return
-    if ('COVERAGE_PROCESS_START' not in os.environ):
-        os.environ['COVERAGE_PROCESS_START'] = os.path.abspath('../../.coveragerc')
-    coveragerc = os.getenv('COVERAGE_PROCESS_START')
-    if coveragerc:
+    if not os.path.exists(path_to_coveragerc):
+        raise ValueError('coveragerc file %s does not exist.' % path_to_coveragerc)
+    os.environ['COVERAGE_PROCESS_START'] = path_to_coveragerc
+    rootdir = os.path.dirname(path_to_coveragerc)
+
+    def combine_report():
+        subprocess.call(
+            [
+                sys.executable, '-m', 'coverage', 'combine',
+            ],
+            cwd=rootdir,
+        )
+        subprocess.call(
+            [
+                sys.executable, '-m', 'coverage', 'report',
+            ],
+            cwd=rootdir,
+        )
+
+    if path_to_coveragerc:
         try:
             import coverage
-            print("Coverage configured with %s" % coveragerc)
+            print("Coverage configured with %s" % path_to_coveragerc)
+            if 'COVERAGE_REPORT' in os.environ:
+                import atexit
+                atexit.register(combine_report)
             coverage.process_startup()
         except ImportError:
-            print("You try to run coverage but coverage is not installed in your virtualenv.")
+            print(
+                "You try to run coverage "
+                "but coverage is not installed in your environment."
+            )
             sys.exit(1)

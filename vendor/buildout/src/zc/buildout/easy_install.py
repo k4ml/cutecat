@@ -251,7 +251,6 @@ class Installer(object):
                  allow_hosts=('*',),
                  check_picked=True,
                  allow_unknown_extras=False,
-                 force_eggs=False,
                  ):
         assert executable == sys.executable, (executable, sys.executable)
         self._dest = dest if dest is None else pkg_resources.normalize_path(dest)
@@ -273,8 +272,6 @@ class Installer(object):
 
         self._index_url = index
         path = (path and path[:] or []) + buildout_and_setuptools_path
-        if force_eggs:
-            path = [p for p in path if not p.endswith('site-packages')]
         self._path = path
         if self._dest is None:
             newest = False
@@ -623,14 +620,16 @@ class Installer(object):
     def _check_picked_requirement_versions(self, requirement, dists):
         """ Check whether we picked a version and, if we did, report it """
         for dist in dists:
-            is_develop = dist.precedence == pkg_resources.DEVELOP_DIST
-            has_version = (len(requirement.specs) == 1
+            if not (dist.precedence == pkg_resources.DEVELOP_DIST
+                or
+                (len(requirement.specs) == 1
                  and
                  requirement.specs[0][0] == '==')
-            if not is_develop and not has_version:
+                ):
                 logger.debug('Picked: %s = %s',
                              dist.project_name, dist.version)
                 self._picked_versions[dist.project_name] = dist.version
+
                 if not self._allow_picked_versions:
                     raise zc.buildout.UserError(
                         'Picked: %s = %s' % (dist.project_name,
@@ -947,7 +946,6 @@ def install(specs, dest,
             allowed_eggs_from_site_packages=None,
             check_picked=True,
             allow_unknown_extras=False,
-            force_eggs=False,
             ):
     assert executable == sys.executable, (executable, sys.executable)
     assert include_site_packages is None
@@ -958,32 +956,16 @@ def install(specs, dest,
                           newest, versions, use_dependency_links,
                           allow_hosts=allow_hosts,
                           check_picked=check_picked,
-                          allow_unknown_extras=allow_unknown_extras,
-                          force_eggs=force_eggs,
-                          )
+                          allow_unknown_extras=allow_unknown_extras)
     return installer.install(specs, working_set)
 
-global_env = pkg_resources.Environment()
-global_ws = pkg_resources.WorkingSet()
-
-def get_best_dist(req):
-    return global_env.best_match(pkg_resources.Requirement.parse(req),
-            global_ws)
-
-_all_dists = {}
-for req in ['zc.buildout', 'pip', 'setuptools']:
-    _all_dists[req] = get_best_dist(req)
-
-buildout_and_setuptools_dists = [
-    _all_dists[req] for req in ['zc.buildout', 'pip', 'setuptools']
-]
-
+buildout_and_setuptools_dists = list(install(['zc.buildout'], None,
+                                             check_picked=False))
 buildout_and_setuptools_path = [d.location
                                 for d in buildout_and_setuptools_dists]
-pip_path = [
-    _all_dists[req].location
-    for req in ['pip', 'setuptools']
-    ]
+
+pip_dists = [d for d in buildout_and_setuptools_dists if d.project_name != 'zc.buildout']
+pip_path = [d.location for d in pip_dists]
 pip_pythonpath = os.pathsep.join(pip_path)
 
 setuptools_path = pip_path
@@ -1768,7 +1750,6 @@ def make_egg_after_pip_install(dest, distinfo_dir):
     def get_all_files(it):
         r = csv.reader(FakeFile(it))
         for row in r:
-            path = os.path.join(egg_dir, row[0])
             yield row[0]
 
     with open(os.path.join(egg_dir, distinfo_dir, 'RECORD')) as f:

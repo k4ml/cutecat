@@ -13,4 +13,3 @@ venvs/
 dist
 .coverage
 .coverage.*
-.cache
