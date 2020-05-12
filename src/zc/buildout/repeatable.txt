@@ -127,8 +127,7 @@ about versions used. If we run the buildout in verbose mode without
 specifying a versions section:
 
     >>> print_(system(buildout+' buildout:versions= -v'), end='')
-    Checking for upgrades.
-    Installing 'zc.buildout', 'setuptools', 'pip'.
+    Installing 'zc.buildout', 'setuptools', 'pip', 'wheel'.
     ...
     Installing 'spam'.
     We have the best distribution that satisfies 'spam'.
@@ -148,8 +147,7 @@ that we can fix them in a versions section.
 If we run the buildout with the versions section:
 
     >>> print_(system(buildout+' -v'), end='')
-    Checking for upgrades.
-    Installing 'zc.buildout', 'setuptools', 'pip'.
+    Installing 'zc.buildout', 'setuptools', 'pip', 'wheel'.
     ...
     Installing 'spam'.
     We have the distribution that satisfies 'spam==1'.
@@ -178,8 +176,7 @@ versions for.
     ... ''' % join('recipe', 'dist'))
 
     >>> print_(system(buildout+' -v'), end='')
-    Checking for upgrades.
-    Installing 'zc.buildout', 'setuptools', 'pip'.
+    Installing 'zc.buildout', 'setuptools', 'pip', 'wheel'.
     ...
     Installing 'spam >0'.
     We have the distribution that satisfies 'spam==1'.
@@ -199,7 +196,6 @@ versions:
     ... allow-picked-versions = false
     ...
     ... [versions]
-    ... spam = 1
     ... eggs = 2.2
     ...
     ... [foo]
@@ -208,9 +204,11 @@ versions:
     >>> print_(system(buildout), end='') # doctest: +ELLIPSIS
     While:
       Installing.
-      Checking for upgrades.
-      Getting distribution for 'setuptools'.
-    Error: Picked: setuptools = 46.1.3
+      Getting section foo.
+      Initializing section foo.
+      Installing recipe spam.
+      Getting distribution for 'spam'.
+    Error: Picked: spam = 2
 
 We can name a version something else, if we wish, using the versions option:
 
@@ -292,8 +290,6 @@ versions it picked at the end of its run:
     Versions had to be automatically picked.
     The following part definition lists the versions picked:
     [versions]
-    pip = V.V
-    setuptools = V.V
     spam = 2
 
 When everything is pinned, no output is generated:

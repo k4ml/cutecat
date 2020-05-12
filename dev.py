@@ -38,36 +38,6 @@ if os.path.isfile(bin_buildout):
 if os.path.isdir('build'):
     shutil.rmtree('build')
 
-######################################################################
-# Make sure we have a relatively clean environment
-
-if '--no-clean' not in sys.argv:
-    try:
-        import pip
-        print('Remove pip, setuptools, wheel')
-        print('')
-        if subprocess.call(
-            [sys.executable] + ['-m', 'pip', 'uninstall', '-y', 'setuptools', 'pip',  'wheel']
-        ):
-            raise SystemError(
-                "Buildout development with pre-installed pip and setuptools\n"
-                "Could not uninstall with pip"
-                )
-        return_code = subprocess.call(
-            [sys.executable] + sys.argv + ['--no-clean']
-        )
-        sys.exit(return_code)
-    except ImportError:
-        pass
-
-    try:
-        import pkg_resources, setuptools, pip
-    except ImportError:
-        pass
-    else:
-        raise SystemError(
-            "Buildout development should not come with pre-installed setuptools or pip"
-            )
 
 #######################################################################
 def install_pip():
@@ -101,6 +71,15 @@ except ImportError:
 
 ######################################################################
 print('')
+print('Latest dependencies')
+print('')
+if subprocess.call(
+    [sys.executable] +
+    ['-m', 'pip', 'install', '--upgrade', 'pip', 'setuptools', 'wheel'],
+    ):
+    raise RuntimeError("Latest dependencies failed.")
+######################################################################
+print('')
 print('Install buildout')
 print('')
 if subprocess.call(
@@ -116,23 +95,6 @@ pkg_resources.working_set.add_entry('src')
 import zc.buildout.easy_install
 zc.buildout.easy_install.scripts(
     ['zc.buildout'], pkg_resources.working_set , sys.executable, 'bin')
-
-######################################################################
-def install_coverage():
-    print('')
-    print('Install coverage')
-    print('')
-    bin_pip = os.path.join('bin', 'pip')
-    if subprocess.call(
-        [sys.executable] +
-        ['-m', 'pip', 'install', 'coverage'],
-        ):
-        raise RuntimeError("coverage install failed.")
-
-try:
-    import coverage
-except ImportError:
-    install_coverage()
 
 ######################################################################
 print('')

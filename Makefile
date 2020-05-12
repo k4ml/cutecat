@@ -45,7 +45,7 @@ PYTHON_DOWNLOAD = $(PYTHON_BUILD_DIR)/$(PYTHON_ARCHIVE).tgz
 BUILD_DIRS = $(PYTHON_PATH) bin build develop-eggs eggs parts
 
 all: all_test
-.PHONY: all download_python python build test coverage docker all_pythons all_test all_coverage
+.PHONY: all download_python python build test docker clean all_pythons all_test
 
 # setup python from source
 $(PYTHON_DOWNLOAD):
@@ -66,10 +66,6 @@ $(PYTHON_PATH)/bin/$(PYTHON_EXE): $(PYTHON_BUILD_DIR)/$(PYTHON_ARCHIVE)/configur
 	make install >/dev/null 2>&1
 	@echo "Finished installing Python"
 
-python_version:
-	mkdir -p $(PYTHON_PATH)
-	echo "$(PYTHON_MINOR)" > $(PYTHON_PATH)/python_version.txt
-
 download_python: $(PYTHON_BUILD_DIR)/$(PYTHON_ARCHIVE)/configure
 
 python: $(PYTHON_PATH)/bin/$(PYTHON_EXE)
@@ -79,7 +75,7 @@ build: python
 	$(PYTHON_PATH)/bin/$(PYTHON_EXE) dev.py
 
 # copy to virtualenvs
-ROOT_FILES := $(HERE)/setup.py $(HERE)/setup.cfg $(HERE)/dev.py $(HERE)/README.rst $(HERE)/CHANGES.rst $(HERE)/buildout.cfg $(HERE)/.coveragerc
+ROOT_FILES := $(HERE)/setup.py $(HERE)/setup.cfg $(HERE)/dev.py $(HERE)/README.rst $(HERE)/CHANGES.rst $(HERE)/buildout.cfg
 SRC_FILES := $(shell find $(HERE)/src ! -path '*egg-info*' \( -name '*.py' -o -name '*.txt' -o -name '*.test' \) )
 RCP_FILES := $(shell find $(HERE)/zc.recipe.egg_ ! -path '*egg-info*' \( -name '*.py' -o -name '*.txt' -o -name '*.rst' -o -name '*.cfg' -o -name '*.in' \) )
 DOC_FILES := $(shell find $(HERE)/doc -name '*.rst' -o -name '*.txt')
@@ -93,23 +89,15 @@ $(ALL_COPY):
 	@cp $(subst $(VENV),$(HERE),$@) $@
 
 $(VENV)/bin/$(PYTHON_EXE): $(PYTHON_PATH)/bin/$(PYTHON_EXE)
+	@command -v virtualenv >/dev/null 2>&1 || { echo "virtualenv required but not installed" >&2; exit 1; }
 	test -d "$(HERE)/venvs" || mkdir -p $(HERE)/venvs
 	virtualenv -p $(PYTHON_PATH)/bin/$(PYTHON_EXE) $(VENV)
-
-venv: $(VENV)/bin/buildout
 
 $(VENV)/bin/test: $(VENV)/bin/$(PYTHON_EXE) $(ALL_COPY)
 	cd $(VENV) && bin/$(PYTHON_EXE) dev.py --no-clean
 
-$(VENV)/bin/coverage: $(VENV)/bin/$(PYTHON_EXE)
-	$(VENV)/bin/pip install coverage
-
-coverage: $(VENV)/bin/coverage $(VENV)/bin/test
-	RUN_COVERAGE= $(VENV)/bin/test $(testargs)
-	cd $(VENV) && bin/coverage combine && bin/coverage report
-
 test: $(VENV)/bin/test
-	$(VENV)/bin/test -1 -vvv -c $(testargs)
+	$(VENV)/bin/test -c -vvv $(testargs)
 
 all_pythons:
 	$(MAKE) PYTHON_VER=2.7 python
@@ -117,13 +105,6 @@ all_pythons:
 	$(MAKE) PYTHON_VER=3.6 python
 	$(MAKE) PYTHON_VER=3.7 python
 	$(MAKE) PYTHON_VER=3.8 python
-
-all_coverage:
-	$(MAKE) PYTHON_VER=2.7 coverage
-	$(MAKE) PYTHON_VER=3.5 coverage
-	$(MAKE) PYTHON_VER=3.6 coverage
-	$(MAKE) PYTHON_VER=3.7 coverage
-	$(MAKE) PYTHON_VER=3.8 coverage
 
 all_test:
 	$(MAKE) PYTHON_VER=2.7 test
@@ -135,7 +116,6 @@ all_test:
 docker:
 	docker build -f .github/workflows/Dockerfile --tag centos_buildout:python${PYTHON_VER} --build-arg PYTHON_VER=${PYTHON_VER} .
 	docker run centos_buildout:python${PYTHON_VER} /buildout/bin/test -c -vvv -t abi
-	docker run centos_buildout:python${PYTHON_VER} /bin/bash -c 'RUN_COVERAGE= /buildout/bin/test -c -vvv -t abi; /buildout/bin/coverage combine; /buildout/bin/coverage report'
 
 clean:
-	rm -rf $(BUILD_DIRS) $(PYTHON_BUILD_DIR)
+	rm -rf $(VENVS) $(PYTHON_BUILD_DIR) $(HERE)/pythons

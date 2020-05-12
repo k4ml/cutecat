@@ -4,7 +4,15 @@ Change History
 2.13.4 (unreleased)
 ===================
 
-- Nothing changed yet.
+- Patch ``setuptools.PackageIndex`` to support ``Requires-Python``.
+  Fragile because it relies on ``pip._internal``.
+  Reason why imports are protected to avoid breaking buildout in case
+  ``pip`` changes too much.
+
+- Use ``pip install`` instead of deprecated ``setuptools.easy_install``.
+
+- Patch ``pkg_resources.Distribution`` to make install of unpinned versions quicker.
+  Most obvious with ``setuptools``.
 
 
 2.13.3 (2020-02-11)
