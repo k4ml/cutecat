@@ -1,4 +1,4 @@
-name: Test in Centos container
+name: Test in Debian container
 
 on: [push, pull_request]
 
@@ -17,9 +17,9 @@ jobs:
       env:
         PYTHON_VER: ${{matrix.python-version}}
       run: |
-        docker build -f .github/workflows/Dockerfile --tag centos_buildout:python${PYTHON_VER} --build-arg PYTHON_VER=${PYTHON_VER} .
+        docker build -f .github/workflows/Dockerfile-debian --tag debian_buildout:python${PYTHON_VER} --build-arg PYTHON_VER=${PYTHON_VER} .
     - name: Test
       env:
         PYTHON_VER: ${{matrix.python-version}}
       run: |
-        docker run centos_buildout:python${PYTHON_VER} /bin/bash -c 'RUN_COVERAGE= COVERAGE_REPORT= /buildout/bin/test -c -vvv'
+        docker run debian_buildout:python${PYTHON_VER} /bin/bash -c 'RUN_COVERAGE= COVERAGE_REPORT= /buildout/bin/test -c -vvv'

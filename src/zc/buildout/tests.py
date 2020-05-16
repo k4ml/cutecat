@@ -145,7 +145,10 @@ class TestEasyInstall(unittest.TestCase):
 
         self.assertIsNotNone(result)
         self.assertEqual(result.version, '3.3')
-        self.assertIn(dest, result.location)
+        if zc.buildout.WINDOWS:
+            self.assertIn(dest.lower(), result.location)
+        else:
+            self.assertIn(dest, result.location)
 
 
 def develop_w_non_setuptools_setup_scripts():
@@ -3412,8 +3415,11 @@ extdemo_setup_py = r"""
 import os, sys
 from distutils.core import setup, Extension
 
-if os.environ.get('test-variable'):
-    print("Have environment test-variable: %%s" %% os.environ['test-variable'])
+if os.environ.get('test_environment_variable'):
+    print(
+        "Have environment test_environment_variable: %%s"
+        %% os.environ['test_environment_variable']
+    )
 
 setup(name = "extdemo", version = "%s", url="http://www.zope.org",
       author="Demo", author_email="demo@demo.com",
@@ -3451,7 +3457,7 @@ def easy_install_SetUp(test):
 def buildout_txt_setup(test):
     zc.buildout.testing.buildoutSetUp(test)
     mkdir = test.globs['mkdir']
-    eggs = os.environ['buildout-testing-index-url'][7:]
+    eggs = os.environ['buildout_testing_index_url'][7:]
     test.globs['sample_eggs'] = eggs
     create_sample_eggs(test)
 
@@ -3558,7 +3564,7 @@ def updateSetup(test):
     test.globs['new_releases'] = new_releases
     ws = getWorkingSetWithBuildoutEgg(test)
     # now let's make the new releases
-    # TOD0 enable new releases of pip wheel setuptools
+    # TODO enable new releases of pip wheel setuptools
     # when eggs enforced
     makeNewRelease('zc.buildout', ws, new_releases)
     os.mkdir(os.path.join(new_releases, 'zc.buildout'))
