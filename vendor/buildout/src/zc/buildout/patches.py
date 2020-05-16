@@ -76,6 +76,7 @@ def patch_PackageIndex():
 
         PY_VERSION_INFO = TargetPython().py_version_info
 
+        # method copied over from setuptools 46.1.3
         def process_url(self, url, retrieve=False):
             """Evaluate a URL as a possible download, and maybe retrieve it"""
             if url in self.scanned_urls and not retrieve:
@@ -114,6 +115,9 @@ def patch_PackageIndex():
 
             base = f.url  # handle redirects
             page = f.read()
+
+            # --- LOCAL CHANGES MADE HERE: ---
+
             if isinstance(page, six.text_type):
                 page = page.encode('utf8')
                 charset = 'utf8'
@@ -134,10 +138,15 @@ def patch_PackageIndex():
 
             plinks = list(parse_links(html_page))
             pip_links = [l.url for l in plinks]
+
+            # --- END OF LOCAL CHANGES ---
+
             if not isinstance(page, str):
                 # In Python 3 and got bytes but want str.
                 page = page.decode(charset, "ignore")
             f.close()
+
+            # --- LOCAL CHANGES MADE HERE: ---
 
             links = []
             for match in HREF.finditer(page):
@@ -150,6 +159,8 @@ def patch_PackageIndex():
             for link in plinks:
                 if _check_link_requires_python(link, PY_VERSION_INFO):
                     self.process_url(link.url)
+
+            # --- END OF LOCAL CHANGES ---
 
             if url.startswith(self.index_url) and getattr(f, 'code', None) != 404:
                 page = self.process_index(url, page)

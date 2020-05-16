@@ -55,12 +55,15 @@ def install_pip():
         with open(get_pip, 'wb') as f:
            f.write(urlopen('https://bootstrap.pypa.io/get-pip.py').read())
 
+        sys.stdout.flush()
         if subprocess.call([sys.executable, get_pip]):
-            raise RuntimeError("pip failed.")
+            raise RuntimeError("Failed to install pip.")
     finally:
         shutil.rmtree(tmp)
+    print("Restart")
+    sys.stdout.flush()
     return_code = subprocess.call(
-        [sys.executable] + sys.argv + ['--no-clean']
+        [sys.executable] + sys.argv
     )
     sys.exit(return_code)
 
@@ -70,18 +73,39 @@ except ImportError:
     install_pip()
 
 ######################################################################
-print('')
-print('Latest dependencies')
-print('')
-if subprocess.call(
-    [sys.executable] +
-    ['-m', 'pip', 'install', '--upgrade', 'pip', 'setuptools', 'wheel'],
-    ):
-    raise RuntimeError("Latest dependencies failed.")
+def check_upgrade(package):
+    print('')
+    print('Check %s' % package)
+    print('')
+
+    try:
+        sys.stdout.flush()
+        output = subprocess.check_output(
+            [sys.executable] + ['-m', 'pip', 'install', '--upgrade', package],
+        )
+        was_up_to_date = b"up-to-date" in output
+        if not was_up_to_date:
+            print(output.decode('utf8'))
+        return not was_up_to_date
+    except subprocess.CalledProcessError:
+        raise RuntimeError("Upgrade %s failed." % package)
+
+need_restart = False
+for package in ['pip', 'setuptools', 'wheel']:
+    did_upgrade = check_upgrade(package)
+    need_restart = need_restart or did_upgrade
+if need_restart:
+    print("Restart")
+    sys.stdout.flush()
+    return_code = subprocess.call(
+        [sys.executable] + sys.argv
+    )
+    sys.exit(return_code)
 ######################################################################
 print('')
 print('Install buildout')
 print('')
+sys.stdout.flush()
 if subprocess.call(
     [sys.executable] +
     ['setup.py', '-q', 'develop', '-m', '-x', '-d', 'develop-eggs'],
@@ -94,7 +118,24 @@ pkg_resources.working_set.add_entry('src')
 
 import zc.buildout.easy_install
 zc.buildout.easy_install.scripts(
-    ['zc.buildout'], pkg_resources.working_set , sys.executable, 'bin')
+    ['zc.buildout'], pkg_resources.working_set, sys.executable, 'bin')
+
+######################################################################
+def install_coverage():
+    print('')
+    print('Install coverage')
+    print('')
+    bin_pip = os.path.join('bin', 'pip')
+    if subprocess.call(
+        [sys.executable] +
+        ['-m', 'pip', 'install', 'coverage'],
+        ):
+        raise RuntimeError("coverage install failed.")
+
+try:
+    import coverage
+except ImportError:
+    install_coverage()
 
 ######################################################################
 print('')
@@ -106,4 +147,5 @@ if sys.platform.startswith('java'):
     # Jython needs the script to be called twice via sys.executable
     assert subprocess.Popen([sys.executable, bin_buildout, '-N']).wait() == 0
 
+sys.stdout.flush()
 sys.exit(subprocess.Popen(bin_buildout).wait())

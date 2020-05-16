@@ -1,13 +1,13 @@
 Change History
 **************
 
-2.13.4 (unreleased)
-===================
+3.0.0 (unreleased)
+==================
 
-- Patch ``setuptools.PackageIndex`` to support ``Requires-Python``.
-  Fragile because it relies on ``pip._internal``.
-  Reason why imports are protected to avoid breaking buildout in case
-  ``pip`` changes too much.
+- Add support for ``Requires-Python`` metadata.
+  Fragile monkeypatch that relies on ``pip._internal``.
+  Emits a warning when support is disabled due to too may changes in
+  ``pip``.
 
 - Use ``pip install`` instead of deprecated ``setuptools.easy_install``.
 

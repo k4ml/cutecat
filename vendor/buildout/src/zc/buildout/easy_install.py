@@ -36,9 +36,10 @@ import sys
 import tempfile
 import zc.buildout
 import zc.buildout.rmtree
+from zc.buildout import WINDOWS
+from zc.buildout import PY3
 import warnings
 import csv
-from pip._internal.utils.misc import FakeFile
 
 try:
     from setuptools.wheel import Wheel  # This is the important import
@@ -50,6 +51,9 @@ try:
 except ImportError:
     SETUPTOOLS_SUPPORTS_WHEELS = False
 
+
+BIN_SCRIPTS = 'Scripts' if WINDOWS else 'bin'
+
 warnings.filterwarnings(
     'ignore', '.+is being parsed as a legacy, non PEP 440, version')
 
@@ -58,7 +62,7 @@ def realpath(path):
     return os.path.normcase(os.path.abspath(_oprp(path)))
 
 default_index_url = os.environ.get(
-    'buildout-testing-index-url',
+    'buildout_testing_index_url',
     'https://pypi.org/simple',
     )
 
@@ -178,7 +182,7 @@ def _execute_permission():
     return 0o777 - current_umask
 
 
-_pip_install_cmd = 'from pip._internal.cli.main import main; main()'
+_pip_install_cmd = 'from pip.__main__ import _main; _main()'
 
 def get_namespace_package_paths(dist):
     """
@@ -1708,8 +1712,9 @@ def make_egg_after_pip_install(dest, distinfo_dir):
     ep_file = os.path.join(dest, distinfo_dir, 'entry_points.txt')
     if os.path.exists(ep_file):
         with open(ep_file) as f:
-            if "console_scripts" in f.read():
-                bin_dir = os.path.join(dest, 'bin')
+            content = f.read()
+            if "console_scripts" in content or "gui_scripts" in content:
+                bin_dir = os.path.join(dest, BIN_SCRIPTS)
                 if os.path.exists(bin_dir):
                     shutil.rmtree(bin_dir)
 
@@ -1747,18 +1752,16 @@ def make_egg_after_pip_install(dest, distinfo_dir):
                 shutil.move(top_level_pyc, egg_dir)
             continue
 
-    def get_all_files(it):
-        r = csv.reader(FakeFile(it))
-        for row in r:
-            yield row[0]
-
-    with open(os.path.join(egg_dir, distinfo_dir, 'RECORD')) as f:
-        all_files = get_all_files(f.readlines())
-
+    if PY3:
+        with open(os.path.join(egg_dir, distinfo_dir, 'RECORD'), newline='') as f:
+            all_files = [row[0] for row in csv.reader(f)]
+    else:
+        with open(os.path.join(egg_dir, distinfo_dir, 'RECORD'), 'rb') as f:
+            all_files = [row[0] for row in csv.reader(f)]
 
     # There might be some c extensions left over
     for entry in all_files:
-        if _do_not_keep_leftover(entry):
+        if entry.endswith(('.pyc', '.pyo')):
             continue
         dest_entry = os.path.join(dest, entry)
         egg_entry = os.path.join(egg_dir, entry)
@@ -1766,17 +1769,6 @@ def make_egg_after_pip_install(dest, distinfo_dir):
             os.rename(dest_entry, egg_entry)
 
     return [egg_dir]
-
-
-SLASH_BIN_SLASH = os.path.join('', 'bin', '')
-
-
-def _do_not_keep_leftover(filename):
-    return (
-        filename.endswith('.pyc') or
-        filename.endswith('.pyo') or
-        SLASH_BIN_SLASH in filename
-    )
 
 
 def unpack_egg(location, dest):
